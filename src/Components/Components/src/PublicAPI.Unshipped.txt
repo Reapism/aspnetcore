@@ -12,13 +12,13 @@ Microsoft.AspNetCore.Components.Infrastructure.ComponentStatePersistenceManager.
 Microsoft.AspNetCore.Components.Infrastructure.ComponentStatePersistenceManager.RestoreStateAsync(Microsoft.AspNetCore.Components.Lifetime.IPersistentComponentStateStore! store) -> System.Threading.Tasks.Task!
 Microsoft.AspNetCore.Components.Infrastructure.ComponentStatePersistenceManager.State.get -> Microsoft.AspNetCore.Components.PersistentComponentState!
 Microsoft.AspNetCore.Components.Lifetime.IPersistentComponentStateStore
-Microsoft.AspNetCore.Components.Lifetime.IPersistentComponentStateStore.GetPersistedStateAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IDictionary<string!, byte[]!>!>!
-Microsoft.AspNetCore.Components.Lifetime.IPersistentComponentStateStore.PersistStateAsync(System.Collections.Generic.IReadOnlyDictionary<string!, byte[]!>! state) -> System.Threading.Tasks.Task!
+Microsoft.AspNetCore.Components.Lifetime.IPersistentComponentStateStore.GetPersistedStateAsync() -> System.Threading.Tasks.Task<System.Collections.Generic.IDictionary<string!, System.Buffers.ReadOnlySequence<byte>>!>!
+Microsoft.AspNetCore.Components.Lifetime.IPersistentComponentStateStore.PersistStateAsync(System.Collections.Generic.IReadOnlyDictionary<string!, System.Buffers.ReadOnlySequence<byte>>! state) -> System.Threading.Tasks.Task!
 Microsoft.AspNetCore.Components.PersistentComponentState
-Microsoft.AspNetCore.Components.PersistentComponentState.Persist(string! key, byte[]! value) -> void
+Microsoft.AspNetCore.Components.PersistentComponentState.Persist(string! key, System.Action<System.Buffers.IBufferWriter<byte>!>! valueWriter) -> void
 Microsoft.AspNetCore.Components.PersistentComponentState.PersistAsJson<TValue>(string! key, TValue instance) -> void
 Microsoft.AspNetCore.Components.PersistentComponentState.RegisterOnPersisting(System.Func<System.Threading.Tasks.Task!>! callback) -> Microsoft.AspNetCore.Components.PersistingComponentStateSubscription
-Microsoft.AspNetCore.Components.PersistentComponentState.TryTake(string! key, out byte[]? value) -> bool
+Microsoft.AspNetCore.Components.PersistentComponentState.TryTake(string! key, out System.Buffers.ReadOnlySequence<byte> value) -> bool
 Microsoft.AspNetCore.Components.PersistentComponentState.TryTakeFromJson<TValue>(string! key, out TValue? instance) -> bool
 Microsoft.AspNetCore.Components.PersistingComponentStateSubscription
 Microsoft.AspNetCore.Components.PersistingComponentStateSubscription.Dispose() -> void
