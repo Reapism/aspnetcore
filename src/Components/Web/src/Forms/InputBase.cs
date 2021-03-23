@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 
@@ -242,7 +241,7 @@ namespace Microsoft.AspNetCore.Components.Forms
         private void UpdateAdditionalValidationAttributes()
         {
             var hasAriaInvalidAttribute = AdditionalAttributes != null && AdditionalAttributes.ContainsKey("aria-invalid");
-            if (EditContext.GetValidationMessages(FieldIdentifier).Any())
+            if (EditContext.HasValidationMessages(FieldIdentifier))
             {
                 if (hasAriaInvalidAttribute)
                 {

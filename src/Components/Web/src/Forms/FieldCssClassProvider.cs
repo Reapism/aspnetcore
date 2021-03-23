@@ -1,8 +1,6 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System.Linq;
-
 namespace Microsoft.AspNetCore.Components.Forms
 {
     /// <summary>
@@ -21,7 +19,7 @@ namespace Microsoft.AspNetCore.Components.Forms
         /// <returns>A CSS class name string.</returns>
         public virtual string GetFieldCssClass(EditContext editContext, in FieldIdentifier fieldIdentifier)
         {
-            var isValid = !editContext.GetValidationMessages(fieldIdentifier).Any();
+            var isValid = !editContext.HasValidationMessages(fieldIdentifier);
             if (editContext.IsModified(fieldIdentifier))
             {
                 return isValid ? "modified valid" : "modified invalid";

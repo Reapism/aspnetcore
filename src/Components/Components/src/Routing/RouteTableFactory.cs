@@ -4,8 +4,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
 using Microsoft.AspNetCore.Components.Routing;
 
@@ -16,44 +14,48 @@ namespace Microsoft.AspNetCore.Components
     /// </summary>
     internal static class RouteTableFactory
     {
-        private static readonly ConcurrentDictionary<Key, RouteTable> Cache =
-            new ConcurrentDictionary<Key, RouteTable>();
+        private static readonly ConcurrentDictionary<Key, RouteTable> Cache = new();
         public static readonly IComparer<RouteEntry> RoutePrecedence = Comparer<RouteEntry>.Create(RouteComparison);
 
-        public static RouteTable Create(IEnumerable<Assembly> assemblies)
+        public static RouteTable Create(IReadOnlySet<Assembly> assemblies)
         {
-            var key = new Key(assemblies.OrderBy(a => a.FullName).ToArray());
+            var key = new Key(assemblies);
             if (Cache.TryGetValue(key, out var resolvedComponents))
             {
                 return resolvedComponents;
             }
 
-            var componentTypes = GetRouteableComponents(key.Assemblies);
+            var componentTypes = GetRouteableComponents(assemblies);
             var routeTable = Create(componentTypes);
             Cache.TryAdd(key, routeTable);
             return routeTable;
         }
 
-        private static List<Type> GetRouteableComponents(IEnumerable<Assembly> assemblies)
+        internal static List<Type> GetRouteableComponents(IEnumerable<Assembly> assemblies)
         {
             var routeableComponents = new List<Type>();
             foreach (var assembly in assemblies)
             {
-                foreach (var type in assembly.ExportedTypes)
-                {
-                    if (typeof(IComponent).IsAssignableFrom(type) && type.IsDefined(typeof(RouteAttribute)))
-                    {
-                        routeableComponents.Add(type);
-                    }
-                }
+                GetRouteableComponents(routeableComponents, assembly);
             }
 
             return routeableComponents;
         }
 
+        private static void GetRouteableComponents(List<Type> routeableComponents, Assembly assembly)
+        {
+            foreach (var type in assembly.ExportedTypes)
+            {
+                if (typeof(IComponent).IsAssignableFrom(type) && type.IsDefined(typeof(RouteAttribute)))
+                {
+                    routeableComponents.Add(type);
+                }
+            }
+        }
+
         internal static RouteTable Create(List<Type> componentTypes)
         {
-            var templatesByHandler = new Dictionary<Type, string[]>();
+            var templatesByHandler = new Dictionary<Type, List<string>>();
             foreach (var componentType in componentTypes)
             {
                 // We're deliberately using inherit = false here.
@@ -61,43 +63,77 @@ namespace Microsoft.AspNetCore.Components
                 // RouteAttribute is defined as non-inherited, because inheriting a route attribute always causes an
                 // ambiguity. You end up with two components (base class and derived class) with the same route.
                 var routeAttributes = componentType.GetCustomAttributes<RouteAttribute>(inherit: false);
+                var templates = new List<string>();
+                foreach (var attribute in routeAttributes)
+                {
+                    templates.Add(attribute.Template);
+                }
 
-                var templates = routeAttributes.Select(t => t.Template).ToArray();
                 templatesByHandler.Add(componentType, templates);
             }
             return Create(templatesByHandler);
         }
 
-        internal static RouteTable Create(Dictionary<Type, string[]> templatesByHandler)
+        internal static RouteTable Create(Dictionary<Type, List<string>> templatesByHandler)
         {
             var routes = new List<RouteEntry>();
-            foreach (var keyValuePair in templatesByHandler)
+            foreach (var (type, templates) in templatesByHandler)
             {
-                var parsedTemplates = keyValuePair.Value.Select(v => TemplateParser.ParseTemplate(v)).ToArray();
-                var allRouteParameterNames = parsedTemplates
-                    .SelectMany(GetParameterNames)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
-
-                foreach (var parsedTemplate in parsedTemplates)
+                var allRouteParameterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var parsedTemplates = new (RouteTemplate, List<string>)[templates.Count];
+                for (var i = 0; i < templates.Count; i++)
                 {
-                    var unusedRouteParameterNames = allRouteParameterNames
-                        .Except(GetParameterNames(parsedTemplate), StringComparer.OrdinalIgnoreCase)
-                        .ToArray();
-                    var entry = new RouteEntry(parsedTemplate, keyValuePair.Key, unusedRouteParameterNames);
+                    var parsedTemplate = TemplateParser.ParseTemplate(templates[i]);
+                    var parameterNames = GetParameterNames(parsedTemplate);
+                    parsedTemplates[i] = (parsedTemplate, parameterNames);
+
+                    foreach (var parameterName in parameterNames)
+                    {
+                        allRouteParameterNames.Add(parameterName);
+                    }
+                }
+
+                foreach (var (parsedTemplate, routeParameterNames) in parsedTemplates)
+                {
+                    var unusedRouteParameterNames = GetUnusedParameterNames(allRouteParameterNames, routeParameterNames);
+                    var entry = new RouteEntry(parsedTemplate, type, unusedRouteParameterNames);
                     routes.Add(entry);
                 }
             }
 
-            return new RouteTable(routes.OrderBy(id => id, RoutePrecedence).ToArray());
+            routes.Sort(RoutePrecedence);
+            return new RouteTable(routes.ToArray());
         }
 
-        private static string[] GetParameterNames(RouteTemplate routeTemplate)
+        private static List<string> GetParameterNames(RouteTemplate routeTemplate)
         {
-            return routeTemplate.Segments
-                .Where(s => s.IsParameter)
-                .Select(s => s.Value)
-                .ToArray();
+            var parameterNames = new List<string>();
+            foreach (var segment in routeTemplate.Segments)
+            {
+                if (!segment.IsParameter)
+                {
+                    continue;
+                }
+
+                parameterNames.Add(segment.Value);
+            }
+
+            return parameterNames;
+        }
+
+        private static IReadOnlyList<string> GetUnusedParameterNames(HashSet<string> allRouteParameterNames, List<string> routeParameterNames)
+        {
+            List<string>? unusedParameters = null;
+            foreach (var item in routeParameterNames)
+            {
+                if (!allRouteParameterNames.Contains(item))
+                {
+                    unusedParameters ??= new();
+                    unusedParameters.Add(item);
+                }
+            }
+
+            return unusedParameters ?? (IReadOnlyList<string>)Array.Empty<string>();
         }
 
         /// <summary>
@@ -199,53 +235,54 @@ namespace Microsoft.AspNetCore.Components
 
         private readonly struct Key : IEquatable<Key>
         {
-            public readonly Assembly[] Assemblies;
+            public readonly IReadOnlySet<Assembly>? Assemblies;
+            public readonly Assembly? Assembly;
 
-            public Key(Assembly[] assemblies)
+            public Key(Assembly assembly)
             {
+                Assembly = assembly;
+                Assemblies = null;
+            }
+
+            public Key(IReadOnlySet<Assembly> assemblies)
+            {
+                Assembly = null;
                 Assemblies = assemblies;
             }
 
             public override bool Equals(object? obj)
             {
-                return obj is Key other ? base.Equals(other) : false;
+                return obj is Key other && Equals(other);
             }
 
             public bool Equals(Key other)
             {
-                if (Assemblies == null && other.Assemblies == null)
+                if (Assembly != null && other.Assembly != null)
                 {
-                    return true;
+                    return Assembly.Equals(other.Assembly);
                 }
-                else if ((Assemblies == null) || (other.Assemblies == null))
+                else if (Assemblies != null && other.Assemblies != null)
                 {
-                    return false;
-                }
-                else if (Assemblies.Length != other.Assemblies.Length)
-                {
-                    return false;
+                    return Assemblies.SetEquals(other.Assemblies);
                 }
 
-                for (var i = 0; i < Assemblies.Length; i++)
-                {
-                    if (!Assemblies[i].Equals(other.Assemblies[i]))
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
+                return false;
             }
 
             public override int GetHashCode()
             {
+                if (Assembly != null)
+                {
+                    return Assembly.GetHashCode();
+                }
+
                 var hash = new HashCode();
 
                 if (Assemblies != null)
                 {
-                    for (var i = 0; i < Assemblies.Length; i++)
+                    foreach (var assembly in Assemblies)
                     {
-                        hash.Add(Assemblies[i]);
+                        hash.Add(assembly);
                     }
                 }
 

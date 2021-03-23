@@ -3,8 +3,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
 
 namespace Microsoft.AspNetCore.Components
@@ -29,8 +27,7 @@ namespace Microsoft.AspNetCore.Components
 
         private static Type? ResolveType(Key key, Assembly[] assemblies)
         {
-            var assembly = assemblies
-                .FirstOrDefault(a => string.Equals(a.GetName().Name, key.Assembly, StringComparison.Ordinal));
+            var assembly = Array.Find(assemblies, a => string.Equals(a.GetName().Name, key.Assembly, StringComparison.Ordinal));
 
             if (assembly == null)
             {

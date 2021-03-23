@@ -6,8 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -152,14 +150,20 @@ namespace Microsoft.AspNetCore.Components.Routing
 
         private void RefreshRouteTable()
         {
-            var assemblies = AdditionalAssemblies == null ? new[] { AppAssembly } : new[] { AppAssembly }.Concat(AdditionalAssemblies);
-            var assembliesSet = new HashSet<Assembly>(assemblies);
+            HashSet<Assembly> assembliesSet;
+            if (AdditionalAssemblies is null)
+            {
+                assembliesSet = new() { AppAssembly };
+            }
+            else
+            {
+                assembliesSet = new(AdditionalAssemblies) { AppAssembly };
+            }
 
             if (!_assemblies.SetEquals(assembliesSet))
             {
-                Routes = PreferExactMatches
-                    ? RouteTableFactory.Create(assemblies)
-                    : LegacyRouteTableFactory.Create(assemblies);
+                Routes = RouteTableFactory.Create(assembliesSet);
+                //    : LegacyRouteTableFactory.Create(assembliesSet);
                 _assemblies.Clear();
                 _assemblies.UnionWith(assembliesSet);
             }

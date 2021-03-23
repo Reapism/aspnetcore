@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Reflection;
 using static Microsoft.AspNetCore.Internal.LinkerFlags;
 
@@ -31,7 +30,7 @@ namespace Microsoft.AspNetCore.Components.Reflection
                         dictionary.Add(property.Name, others);
                     }
 
-                    if (others.Any(other => other.GetMethod?.GetBaseDefinition() == property.GetMethod?.GetBaseDefinition()))
+                    if (others.Exists(other => other.GetMethod?.GetBaseDefinition() == property.GetMethod?.GetBaseDefinition()))
                     {
                         // This is an inheritance case. We can safely ignore the value of property since
                         // we have seen a more derived value.
@@ -44,7 +43,13 @@ namespace Microsoft.AspNetCore.Components.Reflection
                 currentType = currentType.BaseType;
             }
 
-            return dictionary.Values.SelectMany(p => p);
+            foreach (var item in dictionary.Values)
+            {
+                foreach (var property in item)
+                {
+                    yield return property;
+                }
+            }
         }
     }
 }

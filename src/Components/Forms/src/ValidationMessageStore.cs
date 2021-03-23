@@ -107,6 +107,14 @@ namespace Microsoft.AspNetCore.Components.Forms
             _messages.Remove(fieldIdentifier);
         }
 
+        /// <summary>
+        /// Gets a value that determines if there are validation messages associated with the specified field.
+        /// </summary>
+        /// <param name="fieldIdentifier">The identifier for the field.</param>
+        /// <returns><see langword="true"/> if the specified <paramref name="fieldIdentifier"/> has validation messages, otherwise <see langword="false"/>.</returns>
+        public bool HasValidationMessages(in FieldIdentifier fieldIdentifier) =>
+            _messages.TryGetValue(fieldIdentifier, out var messages) && messages.Count != 0;
+
         private List<string> GetOrCreateMessagesListForField(in FieldIdentifier fieldIdentifier)
         {
             if (!_messages.TryGetValue(fieldIdentifier, out var messagesForField))

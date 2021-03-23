@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 
 namespace Microsoft.AspNetCore.Components.Forms
@@ -166,6 +165,16 @@ namespace Microsoft.AspNetCore.Components.Forms
         }
 
         /// <summary>
+        /// Gets a value that determines if there are validation messages associated with the specified field.
+        /// </summary>
+        /// <param name="fieldIdentifier">The identifier for the field.</param>
+        /// <returns><see langword="true"/> if the specified <paramref name="fieldIdentifier"/> has validation messages, otherwise <see langword="false"/>.</returns>
+        public bool HasValidationMessages(in FieldIdentifier fieldIdentifier)
+        {
+            return _fieldStates.TryGetValue(fieldIdentifier, out var state) && state.HasValidationMessages();
+        }
+
+        /// <summary>
         /// Gets the current validation messages for the specified field.
         ///
         /// This method does not perform validation itself. It only returns messages determined by previous validation actions.
@@ -199,7 +208,12 @@ namespace Microsoft.AspNetCore.Components.Forms
         public bool Validate()
         {
             OnValidationRequested?.Invoke(this, ValidationRequestedEventArgs.Empty);
-            return !GetValidationMessages().Any();
+            foreach (var _ in GetValidationMessages())
+            {
+                return true;
+            }
+
+            return false;
         }
 
         internal FieldState? GetFieldState(in FieldIdentifier fieldIdentifier)

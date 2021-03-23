@@ -1,1 +1,3 @@
 #nullable enable
+Microsoft.AspNetCore.Components.Forms.EditContext.HasValidationMessages(in Microsoft.AspNetCore.Components.Forms.FieldIdentifier fieldIdentifier) -> bool
+Microsoft.AspNetCore.Components.Forms.ValidationMessageStore.HasValidationMessages(in Microsoft.AspNetCore.Components.Forms.FieldIdentifier fieldIdentifier) -> bool

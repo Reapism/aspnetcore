@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -208,12 +207,9 @@ namespace Microsoft.AspNetCore.Components.Web.Virtualization
             // Render the loaded items.
             if (_loadedItems != null && _itemTemplate != null)
             {
-                var itemsToShow = _loadedItems
-                    .Skip(_itemsBefore - _loadedItemsStartIndex)
-                    .Take(lastItemIndex - _loadedItemsStartIndex);
-
                 builder.OpenRegion(4);
 
+                var itemsToShow = SkipAndTake(_loadedItems, _itemsBefore - _loadedItemsStartIndex, lastItemIndex - _loadedItemsStartIndex);
                 foreach (var item in itemsToShow)
                 {
                     _itemTemplate(item)(builder);
@@ -379,7 +375,7 @@ namespace Microsoft.AspNetCore.Components.Web.Virtualization
         private ValueTask<ItemsProviderResult<TItem>> DefaultItemsProvider(ItemsProviderRequest request)
         {
             return ValueTask.FromResult(new ItemsProviderResult<TItem>(
-                Items!.Skip(request.StartIndex).Take(request.Count),
+                SkipAndTake(Items!, request.StartIndex, request.Count),
                 Items!.Count));
         }
 
@@ -398,6 +394,24 @@ namespace Microsoft.AspNetCore.Components.Web.Virtualization
             if (_jsInterop != null)
             {
                 await _jsInterop.DisposeAsync();
+            }
+        }
+
+        private static IEnumerable<TItem> SkipAndTake(IEnumerable<TItem> input, int skip, int take)
+        {
+            foreach (var item in input)
+            {
+                if (skip-- > 0)
+                {
+                    continue;
+                }
+
+                if (take-- == 0)
+                {
+                    yield break;
+                }
+
+                yield return item;
             }
         }
     }

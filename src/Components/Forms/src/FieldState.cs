@@ -36,6 +36,22 @@ namespace Microsoft.AspNetCore.Components.Forms
             }
         }
 
+        public bool HasValidationMessages()
+        {
+            if (_validationMessageStores != null)
+            {
+                foreach (var store in _validationMessageStores)
+                {
+                    if (store.HasValidationMessages(_fieldIdentifier))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         public void AssociateWithValidationMessageStore(ValidationMessageStore validationMessageStore)
         {
             if (_validationMessageStores == null)
